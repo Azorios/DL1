@@ -17,7 +17,7 @@ class ResNet50(pl.LightningModule):
         for params in self.model.parameters(): params.requires_grad_ = False
         self.model.fc = nn.Linear(in_features=self.model.fc.in_features, out_features=1)
 
-        self.loss_function = BCEWithLogitsLoss
+        self.loss_function = BCEWithLogitsLoss()
         self.lr = lr
 
         self.acc = BinaryAccuracy()
@@ -31,7 +31,8 @@ class ResNet50(pl.LightningModule):
         return torch.optim.Adam(self.model.fc.parameters(), lr=self.lr)
     
     def training_step(self, batch, batchidx):
-        images, labels = batch
+        images = batch['pixel_values']
+        labels = batch['label'].unsqueeze(-1).float()
 
         output = self.forward(images)
         predictions = torch.sigmoid(output)
@@ -40,18 +41,17 @@ class ResNet50(pl.LightningModule):
         loss = self.loss_function(output, labels)
 
         # calculate accuracy for training
-        self.acc = (predictions, labels)
+        acc = self.acc(predictions, labels)
 
         self.log('train_loss', loss, on_epoch=True)
-        self.log('train_acc', self.acc, on_epoch=True)
+        self.log('train_acc', acc, on_epoch=True)
 
         return loss
     
     def validation_step(self, batch, batchidx):
-        images, labels = batch
-        
-        print(images)
-        print(labels)
+        #images, labels = batch
+        images = batch['pixel_values']
+        labels = batch['label'].unsqueeze(-1).float()
 
         output = self.forward(images)
         predictions = torch.sigmoid(output)
@@ -60,23 +60,24 @@ class ResNet50(pl.LightningModule):
         loss = self.loss_function(output, labels)
 
         # calculate accuracy for training
-        self.acc = (predictions, labels)
+        acc = self.acc(predictions, labels)
 
         self.log('val_loss', loss, on_epoch=True)
-        self.log('val_acc', self.acc, on_epoch=True)
+        self.log('val_acc', acc, on_epoch=True)
 
         return loss
 
     def test_step(self, batch, batchidx):
-        images, labels = batch
+        images = batch['pixel_values']
+        labels = batch['label'].unsqueeze(-1).float()
 
         output = self.forward(images)
         predictions = torch.sigmoid(output)
 
         # calculate accuracy for training
-        self.acc = (predictions, labels)
-        self.f1_score = (predictions, labels)
-        self.auroc = (predictions, labels)
+        acc = self.acc(predictions, labels)
+        f1_score = self.f1_score(predictions, labels)
+        auroc= self.auroc(predictions, labels)
 
-        self.log('test_acc', self.acc, on_epoch=True)
+        self.log('test_acc', acc, on_epoch=True)
         
