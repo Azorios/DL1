@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from PIL import Image
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from torch.nn.modules.loss import BCEWithLogitsLoss
 from torchvision import models, datasets
 from torchvision.transforms import Normalize, Compose, RandomResizedCrop, RandomHorizontalFlip, RandomVerticalFlip, ToTensor, Resize, CenterCrop
@@ -90,6 +90,8 @@ if __name__ == '__main__':
     train_dataset.set_transform(transform_train)
     val_dataset.set_transform(transform_val)
     test_dataset.set_transform(transform_test)
+
+    
 
     batch_size = 16
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
