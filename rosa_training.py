@@ -10,6 +10,8 @@ from datasets import load_dataset, concatenate_datasets
 from transformers import AutoImageProcessor
 import matplotlib.pyplot as plt
 import numpy as np
+from models.resnet50 import ResNet50
+import lightning.pytorch as pl
 
 if __name__ == '__main__':
     # used device for computing
@@ -134,29 +136,19 @@ if __name__ == '__main__':
     imshow(images, labels, batch_size)
 
     # load pretrained resnet50 model from PyTorch
-    model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
-
-    # freeze all parameters
-    for params in model.parameters(): params.requires_grad_ = False
-
-    # customize final layer to become binary classifier
-    nr_filters = model.fc.in_features  # number of input features of last layer
-    model.fc = nn.Linear(nr_filters, 1)
-
+    model = ResNet50()
     print(model)
 
     try:
-        model.load_state_dict(torch.load('./models/resnet50.pth'))
+        load_model = torch.jit.load('./models/resnet50_ds1.pth')
+        with torch.no_grad(): print(load_model)
+        #model.load_state_dict(torch.load('./models/resnet50.pth'))
         #model.name = 'resnet50'
-    except FileNotFoundError:
+    except ValueError:
         pass
 
-    model = model.to(device)
 
-    # loss; binary cross entropy with sigmoid, i.e. no need to use sigmoid in model
-    loss_fn = BCEWithLogitsLoss()
-
-    # optimizer
-    optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.0001)
-
+    trainer = pl.Trainer(max_epochs=10)
+    trainer.fit(model, train_loader, val_loader)
+    trainer.test(model, test_loader)
     #f1 score + AUROC, mit tensorboard
