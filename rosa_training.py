@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from models.resnet50 import ResNet50
 import lightning.pytorch as pl
+import os
 #from pytorch_lightning.callbacks import ModelCheckpoint
 from lightning.pytorch.callbacks import ModelCheckpoint
 
@@ -141,8 +142,14 @@ if __name__ == '__main__':
     imshow(images, labels, batch_size)
 
     # load pretrained resnet50 model from PyTorch
-    model = ResNet50()
-    print(model)
+    checkpoint_callback = ModelCheckpoint(
+        monitor='val_loss',
+        save_top_k=1,
+
+        every_n_epochs=1)
+
+    model = ResNet50()#.load_from_checkpoint(checkpoint_callback.best_model_path)
+    #print(model)
 
     try:
         load_model = torch.jit.load('./models/resnet50_ds1.pth')
@@ -153,18 +160,13 @@ if __name__ == '__main__':
     except ValueError:
         pass
 
-    checkpoint_callback = ModelCheckpoint(
-        monitor='val_loss',
-        save_top_k=1,
-
-        every_n_epochs=1)
-
     trainer = pl.Trainer(max_epochs=1, callbacks=[checkpoint_callback])
-    trainer.fit(model, train_loader, val_loader, ckpt_path=checkpoint_callback.best_model_path)
-    trainer.test(model, test_loader)
 
+    trainer.fit(model, train_loader, val_loader)
+    trainer.test(model, test_loader)
+    model.eval()
     with torch.no_grad():
-        traced = torch.jit.trace(checkpoint_callback.best_model_path, torch.rand(1, 3, 224, 224))
+        traced = torch.jit.trace(model, torch.rand(1, 3, 224, 224))
     torch.jit.save(traced, './models/resnet50_ds1.pth')
 
     reloaded = torch.jit.load('./models/resnet50_ds1.pth')
