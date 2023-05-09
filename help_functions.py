@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import torch
+from sklearn.metrics import confusion_matrix, classification_report
 
 
 def iterate_dataloader(dataloader, device):
@@ -90,3 +91,56 @@ def save_model_with_best_loss(model, val_loss, device):
     print('model updated')
 
     return val_loss
+
+
+def plot_loss(epoch_train_losses, epoch_test_losses, epochs):
+    epochs = list(range(1, epochs+1))
+    plt.plot(epochs, epoch_train_losses, 'r', label='Train Loss')
+    plt.plot(epochs, epoch_test_losses, 'g', label='Validation Loss')
+    plt.title('Train and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()
+
+
+def plot_acc(total_train_acc, total_val_acc, epochs):
+    epochs = list(range(1, epochs+1))
+    plt.plot(epochs, total_train_acc, 'r', label='Train Accuracy')
+    plt.plot(epochs, total_val_acc, 'g', label='Validation Accuracy')
+    plt.title('Train and Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.show()
+
+
+def predict_all(test_loader, model, device):
+    predictions, targets = [], []
+
+    model.eval()
+    for data in test_loader:
+        image, label = get_image_label(data, device)
+
+        output = torch.sigmoid(model(image))
+        preds = torch.round(output)
+
+        preds = preds.detach().cpu().numpy()
+        label = label.detach().cpu().numpy()
+
+        for i in range(len(preds)):
+            predictions.append(preds[i])
+            targets.append((label[i]))
+
+    predictions = np.array(predictions)
+    targets = np.array(targets)
+
+    conf_mat = confusion_matrix(targets, predictions)
+    class_rep = classification_report(targets, predictions, target_names=('Real', 'Generated'))
+
+    print(conf_mat)
+    print(class_rep)
+
+    file = open(f'./model_data/resnet50_ds1_metrics.txt', 'w')
+    file.write(f'ResNet50 Dataset1\n\nConfusion Matrix\n\n{conf_mat}\n\nClassification Report\n\n{class_rep}\n')
+    file.close()
