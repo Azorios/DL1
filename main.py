@@ -11,7 +11,7 @@ from model_data.resnet50 import ResNet50
 
 from dataset import get_dataset
 from transform_data import transform_train, transform_val, transform_test
-from help_functions import iterate_dataloader, imshow, get_best_loss
+from help_functions import iterate_dataloader, imshow, get_best_loss, plot_loss, plot_acc, predict_all
 from training import train_model
 
 import lightning.pytorch as pl
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     test_dataset.set_transform(transform_test)
 
     # load data
-    batch_size = 32
+    batch_size = 16
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -73,9 +73,24 @@ if __name__ == '__main__':
 
     # start training of model
     n_epochs = 2
-    train_model(n_epochs, model, train_loader, device, optimizer, loss_fn, val_loader, best_loss)
+    total_train_losses, total_val_losses, total_train_acc, total_val_acc =\
+        train_model(n_epochs, model, train_loader, device, optimizer, loss_fn, val_loader, best_loss)
 
+    print('evaluating model...')
 
+    print('train loss: ', torch.Tensor(total_train_losses).cpu())
+    print('val loss: ', torch.Tensor(total_val_losses).cpu())
 
+    # plotting losses, accuracies
+    duration = len(total_val_losses)
+    plot_loss(torch.tensor(total_train_losses).cpu(), torch.tensor(total_val_losses).cpu(), duration)
+    plot_acc(total_train_acc, total_val_acc, duration)
+
+    # load best model
+    model = torch.jit.load('./model_data/resnet50_ds1.pth')
+    model.eval()
+
+    # predict all of test dataset and show confusion matrix and classification report
+    predict_all(test_loader, model, device)
     # f1 score + AUROC, mit tensorboard
     # https://pytorch.org/docs/stable/tensorboard.html
