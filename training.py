@@ -102,3 +102,5 @@ def train_model(n_epochs, model, train_loader, device, optimizer, loss_fn, val_l
                 print(f'early stopping counter {early_stopping_counter} / {early_stopping_tolerance}')
                 print("Terminating: early stopping")
                 break  # terminate training
+
+    return total_train_losses, total_val_losses, total_train_acc, total_val_acc
